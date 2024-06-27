@@ -3,8 +3,10 @@ import pandas as pd
 import os
 import matplotlib.pyplot as plt
 from colorama import Fore, Style, init
+import warnings
+warnings.simplefilter(action='ignore', category=FutureWarning)
 
-# Inicialización de Colorama
+# Inicialización de Colorama 
 init()
 
 class Usuario:
@@ -37,16 +39,15 @@ class Usuario:
             'Altura': [self.altura],
             'IMC': [self.imc]
         }
-        if os.path.exists(filename):
-            df = pd.read_csv(filename)
-            if str(self.ci) in df['CI'].astype(str).values:
-                df.loc[df['CI'].astype(str) == str(self.ci), ['Nombre', 'Edad', 'Peso', 'Altura', 'IMC']] = [
-                    self.nombre, self.edad, self.peso, self.altura, self.imc]
-            else:
-                df = pd.concat([df, pd.DataFrame(datos_usuario)], ignore_index=True)
+        df = pd.read_csv(filename) if os.path.exists(filename) else pd.DataFrame(columns=datos_usuario.keys())
+        df['CI'] = df['CI'].astype(str)
+
+        if self.ci in df['CI'].values:
+            df.loc[df['CI'] == self.ci, ['Nombre', 'Edad', 'Peso', 'Altura', 'IMC']] = [
+                self.nombre, self.edad, self.peso, self.altura, self.imc]
         else:
-            df = pd.DataFrame(datos_usuario)
-        
+            df = pd.concat([df, pd.DataFrame(datos_usuario)], ignore_index=True)
+
         df.to_csv(filename, index=False)
         print(f"Datos de usuario actualizados en {filename}")
 
@@ -67,11 +68,10 @@ class ConsumoAlimentos:
             'Calorías': [self.calorias],
             'Fecha Hora': [self.fecha_hora.strftime('%Y-%m-%d %H:%M:%S')]
         }
-        if os.path.exists(filename):
-            df = pd.read_csv(filename)
-            df = pd.concat([df, pd.DataFrame(datos)], ignore_index=True)
-        else:
-            df = pd.DataFrame(datos)
+        df = pd.read_csv(filename) if os.path.exists(filename) else pd.DataFrame(columns=datos.keys())
+        df['CI Usuario'] = df['CI Usuario'].astype(str)
+
+        df = pd.concat([df, pd.DataFrame(datos)], ignore_index=True)
         df.to_csv(filename, index=False)
         print(f"Datos de consumo de alimentos actualizados en {filename}")
 
@@ -92,11 +92,10 @@ class ActividadFisica:
             'Calorías Quemadas': [self.calorias_quemadas],
             'Fecha Hora': [self.fecha_hora.strftime('%Y-%m-%d %H:%M:%S')]
         }
-        if os.path.exists(filename):
-            df = pd.read_csv(filename)
-            df = pd.concat([df, pd.DataFrame(datos)], ignore_index=True)
-        else:
-            df = pd.DataFrame(datos)
+        df = pd.read_csv(filename) if os.path.exists(filename) else pd.DataFrame(columns=datos.keys())
+        df['CI Usuario'] = df['CI Usuario'].astype(str)
+
+        df = pd.concat([df, pd.DataFrame(datos)], ignore_index=True)
         df.to_csv(filename, index=False)
         print(f"Datos de actividad física actualizados en {filename}")
 
@@ -113,24 +112,27 @@ class MonitorSueño:
             'Horas Dormidas': [self.horas_dormidas],
             'Fecha': [self.fecha.strftime('%Y-%m-%d')]
         }
-        if os.path.exists(filename):
-            df = pd.read_csv(filename)
-            df = pd.concat([df, pd.DataFrame(datos)], ignore_index=True)
-        else:
-            df = pd.DataFrame(datos)
+        df = pd.read_csv(filename) if os.path.exists(filename) else pd.DataFrame(columns=datos.keys())
+        df['CI Usuario'] = df['CI Usuario'].astype(str)
+
+        df = pd.concat([df, pd.DataFrame(datos)], ignore_index=True)
         df.to_csv(filename, index=False)
         print(f"Datos de sueño actualizados en {filename}")
 
 class SistemaGestionSalud:
     def __init__(self):
+        self.cargar_usuarios()
+
+    def cargar_usuarios(self):
         if os.path.exists("usuarios.csv"):
             self.usuarios = pd.read_csv("usuarios.csv")
+            self.usuarios['CI'] = self.usuarios['CI'].astype(str)
         else:
             self.usuarios = pd.DataFrame(columns=['CI', 'Nombre', 'Edad', 'Peso', 'Altura', 'IMC'])
 
     def menu(self):
         while True:
-            print(Fore.MAGENTA + Style.BRIGHT + """
+            print(Fore.GREEN + Style.BRIGHT + """
                                  _   _            _ _   _     _____  __    ___  
                 *   *    *      | | | | ___  __ _| | |_| |__ |___ / / /_  / _ \   *   *    *
                 *   *    *      | |_| |/ _ \/ _` | | __| '_ \  |_ \| '_ \| | | | *    *   *
@@ -147,7 +149,7 @@ class SistemaGestionSalud:
             print("5. Registrar horas de sueño")
             print("6. Evaluar salud del usuario")
             print("7. Salir")
-            opcion = input("Seleccione una opción: ")
+            opcion = input(Fore.BLUE + Style.BRIGHT +"Seleccione una opción: ")
 
             if opcion == '1':
                 self.registrar_usuario()
@@ -178,21 +180,16 @@ class SistemaGestionSalud:
         ci = input("Ingrese su CI: ")
         nuevo_usuario = Usuario(nombre, edad, peso, altura, ci)
         nuevo_usuario.guardar_datos()
-        self.usuarios = pd.read_csv("usuarios.csv")
+        self.cargar_usuarios()
         print("Usuarios después de registrar:")
         print(self.usuarios)
 
     def actualizar_usuario(self, ci, nuevo_peso):
         ci = str(ci)
-        print(f"Actualizando usuario con CI: {ci}")  # Depuración
-        print("Usuarios actuales en el sistema:")
-        print(self.usuarios)  # Para verificar el contenido del DataFrame
-
-        if ci in self.usuarios['CI'].astype(str).values:
-            index = self.usuarios[self.usuarios['CI'].astype(str) == ci].index[0]
+        if ci in self.usuarios['CI'].values:
+            index = self.usuarios[self.usuarios['CI'] == ci].index[0]
             self.usuarios.at[index, 'Peso'] = nuevo_peso
-            self.usuarios.at[index, 'IMC'] = Usuario(self.usuarios.at[index, 'Nombre'], self.usuarios.at[index, 'Edad'],
-                                                     nuevo_peso, self.usuarios.at[index, 'Altura'], ci).calcular_imc()
+            self.usuarios.at[index, 'IMC'] = Usuario(self.usuarios.at[index, 'Nombre'], self.usuarios.at[index, 'Edad'],  nuevo_peso, self.usuarios.at[index, 'Altura'], ci).calcular_imc()                                    
             self.usuarios.to_csv("usuarios.csv", index=False)
             print("Perfil actualizado correctamente.")
         else:
@@ -222,12 +219,19 @@ class SistemaGestionSalud:
 
     def evaluar_salud_usuario(self, ci):
         ci = str(ci)
-        print(f"Evaluando salud para CI: {ci}")  # Depuración
-        print("Usuarios actuales en el sistema:")
-        print(self.usuarios)  # Para verificar el contenido del DataFrame
-
-        if ci in self.usuarios['CI'].astype(str).values:
-            usuario = self.usuarios[self.usuarios['CI'].astype(str) == ci].iloc[0]
+        self.cargar_usuarios()
+        if ci in self.usuarios['CI'].values:
+            usuario = self.usuarios[self.usuarios['CI'] == ci].iloc[0]
+            
+            # Verify data existence
+            horas_sueno = self.obtener_horas_sueno(ci)
+            calorias_consumidas, calorias_quemadas = self.obtener_calorias(ci)
+            duracion_ejercicio = self.obtener_duracion_ejercicio(ci)
+            
+            if horas_sueno == 0 and calorias_consumidas == 0 and duracion_ejercicio == 0:
+                print("No se encontraron datos recientes para este usuario.")
+                return
+            
             puntos_salud, detalles_salud = self.calcular_puntuacion_salud(usuario)
             print(f"Evaluación de salud para {usuario['Nombre']}: {puntos_salud} puntos")
             self.generar_grafico_evaluacion(usuario, detalles_salud)
@@ -240,15 +244,18 @@ class SistemaGestionSalud:
 
         # Evaluar sueño
         horas_sueno = self.obtener_horas_sueno(usuario['CI'])
-        if horas_sueno >= 8:
-            puntos += 25
-            detalles_salud['Sueño'] = 25
-        elif 6 <= horas_sueno < 8:
-            puntos += 20
-            detalles_salud['Sueño'] = 20
-        elif 4 <= horas_sueno < 6:
-            puntos += 10
-            detalles_salud['Sueño'] = 10
+        if pd.notna(horas_sueno):
+            if horas_sueno >= 8:
+                puntos += 25
+                detalles_salud['Sueño'] = 25
+            elif 6 <= horas_sueno < 8:
+                puntos += 20
+                detalles_salud['Sueño'] = 20
+            elif 4 <= horas_sueno < 6:
+                puntos += 10
+                detalles_salud['Sueño'] = 10
+            else:
+                detalles_salud['Sueño'] = 0
         else:
             detalles_salud['Sueño'] = 0
 
@@ -274,15 +281,12 @@ class SistemaGestionSalud:
         elif 500 < diferencia_calorias <= 1000:
             puntos += 10
             detalles_salud['Alimentos'] = 10
-        elif 0 <= diferencia_calorias <= 500:
-            puntos += 25
-            detalles_salud['Alimentos'] = 25
-            puntos += 20
-        elif diferencia_calorias < 0 :
-            detalles_salud['Alimentos'] = 0
-        else:
+        elif 0 < diferencia_calorias <= 500:
             puntos += 20
             detalles_salud['Alimentos'] = 20
+        else:
+            puntos += 25
+            detalles_salud['Alimentos'] = 25
 
         # Evaluar ejercicio
         duracion_ejercicio = self.obtener_duracion_ejercicio(usuario['CI'])
@@ -306,17 +310,35 @@ class SistemaGestionSalud:
     def obtener_horas_sueno(self, ci):
         try:
             df = pd.read_csv("monitor_sueno.csv")
-            horas_sueno = df[df['CI Usuario'].astype(str) == ci]['Horas Dormidas'].mean()
-            return horas_sueno
+            df['CI Usuario'] = df['CI Usuario'].astype(str)
+            df['Fecha'] = pd.to_datetime(df['Fecha'])
+            last_week = datetime.datetime.now() - datetime.timedelta(days=7)
+            
+            recent_data = df[(df['CI Usuario'] == str(ci)) & (df['Fecha'] > last_week)]
+            if not recent_data.empty:
+                return recent_data['Horas Dormidas'].mean()
+            return 0
         except FileNotFoundError:
+            print("Archivo de sueño no encontrado.")
             return 0
 
     def obtener_calorias(self, ci):
         try:
             df_alimentos = pd.read_csv("consumo_alimentos.csv")
             df_actividad = pd.read_csv("actividad_fisica.csv")
-            calorias_consumidas = df_alimentos[df_alimentos['CI Usuario'].astype(str) == ci]['Calorías'].sum()
-            calorias_quemadas = df_actividad[df_actividad['CI Usuario'].astype(str) == ci]['Calorías Quemadas'].sum()
+            df_alimentos['CI Usuario'] = df_alimentos['CI Usuario'].astype(str)
+            df_actividad['CI Usuario'] = df_actividad['CI Usuario'].astype(str)
+            df_alimentos['Fecha Hora'] = pd.to_datetime(df_alimentos['Fecha Hora'])
+            df_actividad['Fecha Hora'] = pd.to_datetime(df_actividad['Fecha Hora'])
+            
+            last_week = datetime.datetime.now() - datetime.timedelta(days=7)
+            
+            recent_alimentos = df_alimentos[(df_alimentos['CI Usuario'] == str(ci)) & (df_alimentos['Fecha Hora'] > last_week)]
+            recent_actividad = df_actividad[(df_actividad['CI Usuario'] == str(ci)) & (df_actividad['Fecha Hora'] > last_week)]
+            
+            calorias_consumidas = recent_alimentos['Calorías'].sum() if not recent_alimentos.empty else 0
+            calorias_quemadas = recent_actividad['Calorías Quemadas'].sum() if not recent_actividad.empty else 0
+            
             return calorias_consumidas, calorias_quemadas
         except FileNotFoundError:
             return 0, 0
@@ -324,8 +346,14 @@ class SistemaGestionSalud:
     def obtener_duracion_ejercicio(self, ci):
         try:
             df = pd.read_csv("actividad_fisica.csv")
-            duracion_ejercicio = df[df['CI Usuario'].astype(str) == ci]['Duración Minutos'].sum()
-            return duracion_ejercicio
+            df['CI Usuario'] = df['CI Usuario'].astype(str)
+            df['Fecha Hora'] = pd.to_datetime(df['Fecha Hora'])
+            last_week = datetime.datetime.now() - datetime.timedelta(days=7)
+            
+            recent_data = df[(df['CI Usuario'] == str(ci)) & (df['Fecha Hora'] > last_week)]
+            if not recent_data.empty:
+                return recent_data['Duración Minutos'].sum()
+            return 0
         except FileNotFoundError:
             return 0
 
